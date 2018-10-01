@@ -6,7 +6,6 @@ class Plugin:
         self.main = main
         self.updater = updater
         self.logger = main.logger
-        updater.dispatcher.add_handler(CommandHandler('echo', self.echo))
         updater.dispatcher.add_error_handler(self.onerror)
 
     @run_async
