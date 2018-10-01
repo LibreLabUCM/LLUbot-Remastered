@@ -4,77 +4,76 @@ from telegram.ext.dispatcher import run_async
 import configparser
 import logging
 
+import importlib
+import pkgutil
+
+
 defaultExampleToken = '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11'
 
-logger = logging.getLogger(__name__)
 
-@run_async
-def start(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="Hi")
+class LLUbot:
+    def __init__(self, configFileName):
+        self.configFileName = configFileName
+        self.loadconfig()
+        self.setupLogger()
 
-@run_async
-def help(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="/ping")
+        self.logger.info('Configured %i workers', self.workers)
 
-@run_async
-def ping(bot, update):
-    update.message.reply_text("Pong")
+        # Setup Bot
+        assert self.token != defaultExampleToken, "Set a token in the configuration file"
+        self.updater = Updater(token=self.token, workers=self.workers)
+        self.bot = self.updater.bot
+        self.dispatcher = self.updater.dispatcher
+        self.logger.info('Bot started')
 
-@run_async
-def echo(bot, update):
-    update.message.reply_text(update.message.text)
+        self.loadPlugins()
+        self.initPlugins()
 
-@run_async
-def noncommand(bot, update):
-    logger.info('[%s] %s', update.message.from_user.first_name, update.message.text)
-    update.message.reply_text("Not a command: %s" % update.message.text)
-
-
-def error(bot, update, error):
-    logger.warning('Update "%s" caused error "%s"', update, error)
+        self.botinfo = self.bot.get_me()
+        self.logger.info('Bot: @%s (%s)', self.botinfo.username, self.botinfo.first_name)
 
 
-def main():
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    
-    token = config.get('BotConfig', 'token', fallback=defaultExampleToken)
-    workers = int(config.getint('BotConfig', 'workers', fallback=4))
-    
-    handlers = []
-    handlers.append(logging.FileHandler('LLUbot.log'))
-    handlers.append(logging.StreamHandler())
-    datefmt="%Y-%m-%d %H:%M:%S"
-    logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO, datefmt=datefmt, handlers = handlers)
-    logger = logging.getLogger(__name__)
-    
-    logger.info('Configured %i workers', workers)
+        self.updater.start_polling()
+        self.logger.info('Bot ready')
+        self.updater.idle()
+        self.logger.info('Bot stopped')
 
-    assert token != defaultExampleToken, "Set a token in the configuration file"
-    
-    updater = Updater(token=token, workers=workers)
-    bot = updater.bot
-    dispatcher = updater.dispatcher
+    def loadconfig(self):
+        self.config = configparser.ConfigParser()
+        self.config.read(self.configFileName)
+        self.token = self.config.get('BotConfig', 'token', fallback=defaultExampleToken)
+        self.workers = int(self.config.getint('BotConfig', 'workers', fallback=4))
+        self.loggerdatefmt = self.config.get('Logging', 'datefmt', fallback="%Y-%m-%d %H:%M:%S")
+        self.pluginspath = self.config.get('Plugins', 'path', fallback="plugins")
+        self.pluginsextension = self.config.get('Plugins', 'extension', fallback=".plugin.py")
 
-    logger.info('Bot started')
-    
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('help', help))
-    dispatcher.add_handler(CommandHandler('ping', ping))
-    dispatcher.add_handler(CommandHandler('echo', echo))
-    dispatcher.add_handler(MessageHandler(Filters.text, noncommand))
-    
-    dispatcher.add_error_handler(error)
+    def setupLogger(self):
+        handlers = []
+        handlers.append(logging.FileHandler('LLUbot.log'))
+        handlers.append(logging.StreamHandler())
+        datefmt=self.loggerdatefmt
+        logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO, datefmt=datefmt, handlers = handlers)
+        self.logger = logging.getLogger(__name__)
 
-    botinfo = bot.get_me()
-    logger.info('Bot: @%s (%s)', botinfo.username, botinfo.first_name)
+    def loadPlugins(self):
+        plugins = __import__(self.pluginspath)
+        def iter_namespace(ns_pkg):
+            return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+        self.plugins = {
+            name: importlib.import_module(name)
+            for finder, name, ispkg
+            in iter_namespace(plugins)
+        }
+    def initPlugins(self):
+        for pluginname, plugin in self.plugins.items():
+            self.logger.info('Init plugin: %s' % pluginname)
+            plugin.Plugin(main=self, updater=self.updater)
 
+    def getPlugins(self):
+        return self.plugins
 
-    updater.start_polling()
-    logger.info('Bot ready')
-    updater.idle()
-    logger.info('Bot stopped')
-
+    def getConfig(self):
+        return self.config
 
 if __name__ == '__main__':
-    main()
+    LLUbot('config.ini')
