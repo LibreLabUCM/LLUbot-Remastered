@@ -59,15 +59,20 @@ class LLUbot:
         plugins = __import__(self.pluginspath)
         def iter_namespace(ns_pkg):
             return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
-        self.plugins = {
+        pluginlist = {
             name: importlib.import_module(name)
             for finder, name, ispkg
             in iter_namespace(plugins)
         }
+        self.plugins = {}
+        for pluginname, plugin in pluginlist.items():
+            self.logger.info('Init plugin: %s' % pluginname)
+            self.plugins[pluginname] = plugin.Plugin(main=self, updater=self.updater)
+
     def initPlugins(self):
         for pluginname, plugin in self.plugins.items():
-            self.logger.info('Init plugin: %s' % pluginname)
-            plugin.Plugin(main=self, updater=self.updater)
+            if hasattr(plugin, 'postinit'):
+                plugin.postinit()
 
     def getPlugins(self):
         return self.plugins
