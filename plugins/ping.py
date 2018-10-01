@@ -3,9 +3,6 @@ from telegram.ext.dispatcher import run_async
 
 class Plugin:
     def __init__(self, main, updater):
-        self.main = main
-        self.updater = updater
-        self.logger = main.logger
         updater.dispatcher.add_handler(CommandHandler('ping', self.ping))
         updater.dispatcher.add_handler(CommandHandler('noping', self.noping))
 
