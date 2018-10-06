@@ -32,7 +32,7 @@ class LLUbot:
         self.botinfo = self.bot.get_me()
         self.logger.info('Bot: @%s (%s)', self.botinfo.username, self.botinfo.first_name)
 
-
+        # Init bot
         self.updater.start_polling()
         self.logger.info('Bot ready')
         self.updater.idle()
@@ -51,7 +51,7 @@ class LLUbot:
         handlers = []
         handlers.append(logging.FileHandler('LLUbot.log'))
         handlers.append(logging.StreamHandler())
-        datefmt=self.loggerdatefmt
+        datefmt = self.loggerdatefmt
         logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO, datefmt=datefmt, handlers = handlers)
         self.logger = logging.getLogger(__name__)
 
