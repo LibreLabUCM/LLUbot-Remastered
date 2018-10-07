@@ -1,5 +1,8 @@
 # LLUbot-Remastered
 
+**This project is no longer maintained on Github, we are cotinuing the development on Gitlab**
+
+Our new Gitlab repository:
 https://gitlab.librelabucm.org/LLUorg/LLUbot-Remastered
 
 
