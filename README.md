@@ -1,5 +1,6 @@
 # LLUbot-Remastered
-http://t.me/LLUdevbot
+
+https://gitlab.librelabucm.org/LLUorg/LLUbot-Remastered
 
 
 ## Requirements
